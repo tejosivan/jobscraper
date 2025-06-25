@@ -7,6 +7,9 @@ from urllib.parse import quote_plus
 import re
 import os
 
+#database imports
+from dotenv import load_dotenv
+import psycopg2
 #Selenium Imports
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -35,8 +38,52 @@ def is_us_location(location):
     tokens = set(re.split(r"[,\s\-]+", location.upper()))
     return bool(tokens & US_KEYWORDS)
 
+def create_jobs_table():
+    conn = psycopg2.connect(
+        user=os.getenv("user"),
+        password=os.getenv("password"),
+        host=os.getenv("host"),
+        port=os.getenv("port"),
+        dbname=os.getenv("dbname")
+    )
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scraped_jobs (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            url TEXT UNIQUE NOT NULL,
+            location TEXT,
+            confirmed_us BOOLEAN,scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+                """)
+    conn.commit()
+    cur.close()
+    conn.close()
+    print("'jobs' table is ready.")
+
+def insert_jobs_to_db(jobs):
+    conn = psycopg2.connect(
+        user=os.getenv("user"),
+        password=os.getenv("password"),
+        host=os.getenv("host"),
+        port=os.getenv("port"),
+        dbname=os.getenv("dbname")
+    )
+    cur = conn.cursor()
+    for job in jobs:
+        cur.execute("""
+            INSERT INTO scraped_jobs (title, url, location, confirmed_us)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (url) DO NOTHING
+        """, (job["Title"], job["URL"], job["Location"], job["Confirmed_US"]))
+    conn.commit()
+    cur.close()
+    conn.close()
+    print(f"Inserted {len(jobs)} job(s) into the database.")
+
 #################Scraper###############################
 def scrape_workday_jobs(base_url, search_query):
+    load_dotenv()
+    create_jobs_table()
     encoded_query = quote_plus(search_query)
     timestamp = datetime.now().strftime("%Y%m%d")
     output_dir = "scraped_jobs"
@@ -104,7 +151,7 @@ def scrape_workday_jobs(base_url, search_query):
         writer.writeheader()
         writer.writerows(all_jobs)
     print(f"Saved to {output_file}")
-
+    insert_jobs_to_db(all_jobs)
 #######################################################
 if __name__ == "__main__":
     if len(sys.argv) != 3:
