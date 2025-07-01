@@ -82,6 +82,9 @@ def insert_jobs_to_db(jobs):
 
 #################Scraper###############################
 def scrape_workday_jobs(base_url, search_query):
+
+    #tokenize search query for better results
+    tokens = [t.lower() for t in search_query.split() if len(t) > 2]
     load_dotenv()
     create_jobs_table()
     encoded_query = quote_plus(search_query)
@@ -129,9 +132,10 @@ def scrape_workday_jobs(base_url, search_query):
                 except:
                     location = "N/A"
 
-                if url not in seen_urls:
-                    seen_urls.add(url)
-                    all_jobs.append({"Title": title, "URL": url, "Location": location, "Confirmed_US": is_us_location(location)})
+                if any(token in title.lower() for token in tokens):
+                    if url not in seen_urls:
+                        seen_urls.add(url)
+                        all_jobs.append({"Title": title, "URL": url, "Location": location, "Confirmed_US": is_us_location(location)})
 
             next_buttons = driver.find_elements(By.CSS_SELECTOR, "button[data-uxi-element-id='next']")
             if next_buttons and next_buttons[0].is_enabled():
