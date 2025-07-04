@@ -18,10 +18,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 #######################################################
-all_jobs = []
+
 ###################Helper Functions####################
 US_KEYWORDS ={
-    "US", "USA", "UNITED", "STATES", "UNITED STATES",
+    "US", "USA","STATES", "UNITED STATES",
     "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
     "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
     "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
@@ -82,6 +82,8 @@ def insert_jobs_to_db(jobs):
 
 #################Scraper###############################
 def scrape_workday_jobs(base_url, search_query):
+    print(f"Scraping workday jobs from {base_url} for query: {search_query}\n")
+    all_jobs = []
 
     #tokenize search query for better results
     tokens = [t.lower() for t in search_query.split() if len(t) > 2]
@@ -89,7 +91,7 @@ def scrape_workday_jobs(base_url, search_query):
     create_jobs_table()
     encoded_query = quote_plus(search_query)
     timestamp = datetime.now().strftime("%Y%m%d")
-    output_dir = "scraped_jobs"
+    output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "scraped_jobs")
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{base_url.split('//')[1].split('.')[0]}_{search_query.replace(' ', '_').lower()}_jobs_{timestamp}.csv")
     seen_urls = set()
